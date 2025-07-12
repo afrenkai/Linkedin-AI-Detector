@@ -1,0 +1,11 @@
+[project]
+name = "li-slop-lm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pytest>=8.4.1",
+    "regex>=2024.11.6",
+    "tqdm>=4.67.1",
+]

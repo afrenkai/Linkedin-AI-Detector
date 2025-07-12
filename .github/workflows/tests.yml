@@ -1,0 +1,29 @@
+name: Run Unit Tests Using UV
+
+on: [push]
+env:
+  UV_SYSTEM_PYTHON: 1
+
+jobs:
+    build-linux:
+      name: Python with uv
+      runs-on: ubuntu-latest
+
+      steps:
+        - uses: actions/checkout@v4
+        - name: lint codebase with ruff
+          uses: astral-sh/ruff-action@v3
+        - name: Install uv
+          uses: astral-sh/setup-uv@v5
+        - name: "Set up Python"
+          uses: actions/setup-python@v5
+          with:
+              python-version-file: ".python-version"
+        - name: "Activate venv as per declared requirements file"
+          run: uv venv
+        - name: "Install reqs from requirements"
+          run: uv pip install -r requirements.txt
+        - name: "Install reqs for linux"
+          run: uv pip install -r requirements_cuda.txt
+        - name: "Run tests"
+          run: uv run --no-sync pytest tests
