@@ -1,9 +1,20 @@
-from tokenization.build_vocab import pre_tokenize, train_bpe, construct_final_vocab
-from tests.consts_test import EXPECTED_MERGE_OUTPUT, EXPECTED_VOCAB
+from tokenization.build_vocab import BPETokenizer, clean_decoded_output
+from tests.tok_toy_scenarios import get_maps
+from tests.consts_test import EXPECTED_VOCAB, TEST_ENCODING, EXPECTED_TOKENS, CLEANING_PATTERN
+import regex as re
+
 
 def make_sure_emojis_work():
-    assert pre_tokenize("🚀") == ['<BOW>', '🚀', '<EOW>']
 
-def test_metrics():
-    assert train_bpe(["I am upskilling fresher 👳️"], n_merges=50) == EXPECTED_MERGE_OUTPUT
-    assert construct_final_vocab(EXPECTED_MERGE_OUTPUT, None) == EXPECTED_VOCAB
+    assert BPETokenizer.pre_tokenize("🚀") == ['<BOW>', '🚀', '<EOW>']
+
+def test_tokenizer():
+    tokenizer = BPETokenizer()
+    corpus = ["I am upskilling fresher 👳️"]
+    assert (get_maps(tokenizer, corpus)[0] == EXPECTED_TOKENS)
+    assert (get_maps(tokenizer, corpus)[1] == EXPECTED_VOCAB)
+    assert len(get_maps(tokenizer, corpus)[0]) == len(get_maps(tokenizer, corpus)[1])
+    assert (tokenizer.encode(str(corpus)) == [20, 23, 23, 21, 1, 20, 3, 5, 13, 21, 20, 3, 18, 15, 17, 11, 10, 12, 12, 10, 14, 8, 21, 20, 3, 7, 16, 6, 17, 9, 6, 16, 21, 20, 3, 19, 23, 23, 21]
+)
+    assert clean_decoded_output(tokenizer.decode(TEST_ENCODING)) == re.sub(CLEANING_PATTERN, "", str(corpus))
+

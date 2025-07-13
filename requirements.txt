@@ -2,3 +2,4 @@ regex
 tqdm
 pytest
 numpy
+ruff
