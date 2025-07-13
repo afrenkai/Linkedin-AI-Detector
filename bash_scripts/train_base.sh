@@ -11,8 +11,7 @@
 set -e
 wget -qO- https://astral.sh/uv/install.sh | sh
 
-module load python
-module load cuda/12.4
+module load cuda/12.8.0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$SCRIPT_DIR"
