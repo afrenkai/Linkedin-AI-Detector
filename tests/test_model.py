@@ -1,5 +1,5 @@
 import json
-from model_arch.decoder import SlopGPT, SlopGPTConfig
+from model_arch.SlopGPT import SlopGPT, SlopGPTConfig
 import torch
 
 def test_logits():
@@ -11,3 +11,5 @@ def test_logits():
         model = SlopGPT(config).to(device)
         logits, _ = model(tokens)
         assert logits.shape == (tokens.size(0), tokens.size(1), config.vocab_size) # tensor of shape [[[batch_size]], [[seq_len]], [[vocab_size]]]
+
+

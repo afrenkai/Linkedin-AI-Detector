@@ -24,8 +24,8 @@ class SlopDataset(Dataset):
         y = torch.tensor(seq[1:], dtype=torch.long)
         return x, y
     
-def create_dl(corpus: str, block_size: int, batch_size: int):
+def create_dl(corpus: str, block_size: int, batch_size: int, split: str = 'train'):
     # TODO: padding?
     ds = SlopDataset(corpus, block_size)
-    dl = DataLoader(ds, batch_size, shuffle = True, drop_last=True)
+    dl = DataLoader(ds, batch_size, shuffle = True if split == 'train' else False, drop_last=True)
     return dl

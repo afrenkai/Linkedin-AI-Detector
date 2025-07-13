@@ -3,4 +3,10 @@ tqdm
 pytest
 numpy
 ruff
+wandb
+matplotlib
+pandas
+seaborn
+tensorboard
+plotly
 torchtune

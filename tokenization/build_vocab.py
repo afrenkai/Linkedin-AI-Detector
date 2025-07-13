@@ -180,19 +180,6 @@ def clean_decoded_output(output: str):
     return new_str
 
 
-if __name__ == "__main__":
-    # print(pre_tokenize("🚀"))
-    corpus = ["I am upskilling fresher 👳️"]
 
-    TOK = BPETokenizer()
-    TOK.regex_split(corpus[0])
 
-    TOK.train(corpus, n_merges=100, verbose=False)
-    print(TOK.id_to_tok_map)
-    print("Vocabulary size:", len(TOK.tok_to_id_map))
-    encoding = TOK.encode(str(corpus))
-    print(encoding)
-    # decoded = TOK.decode(encoding)
-    # print(clean_decoded_output(decoded))
-    # clean_corp_compare = re.sub(r"\['|\']", "", str(corpus))
-    # print(clean_corp_compare)
+    

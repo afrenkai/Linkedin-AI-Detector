@@ -45,7 +45,7 @@ class SlopGPT(nn.Module):
         batch, seq_len = input_idxs.size()
         device = input_idxs.device # TODO: lowkey a little freaky if I do multigpu
 
-        pos = torch.arange(0, seq_len, device = device).unsqueeze(0)
+        # pos = torch.arange(0, seq_len, device = device).unsqueeze(0)
         x = self.embed(input_idxs) + self.pos_enc[:, :seq_len, :] # since we are only targeting position in the tensor
         mask = torch.tril(torch.ones(seq_len, seq_len, device = device)).unsqueeze(0).unsqueeze(0) # tensor of [[[1]], [1]], [seq_len]], [seq_len]]] to match shape of other tensor
 
@@ -93,9 +93,7 @@ class SlopGPTransformerBlock(nn.Module):
         
 
         x_norm_pre_qkv = self.rmsnorm1(x)
-        if verbose:
-            print(x_norm_pre_qkv)
-       
+ 
         # for q, k, and v initially: 4 tensor of dimensions : [[[batch]][sequence_length]][[n_heads]][[head_dim]]], swapping dims 1 and 2 (since we're 0 indexed) -> 
         # [[[batch]][n_heads]][[sequence_length]][[head_dim]]]
          
@@ -127,16 +125,6 @@ class SlopGPTransformerBlock(nn.Module):
         out_x = attn_x + res_x
 
         return out_x, new_kv_cache
-
-
-if __name__ == "__main__":
-    with open ('model_arch/model_config.json', 'rb') as f:
-        data = json.load(f)
-    config = SlopGPTConfig(**data)
-    tokens = torch.randint(0, config.vocab_size, (2, 128))
-    model = SlopGPT(config)
-    logits, _ = model(tokens)
-    print (logits())
 
 
 

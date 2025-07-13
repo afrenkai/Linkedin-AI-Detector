@@ -14,7 +14,6 @@ def test_tokenizer():
     assert (get_maps(tokenizer, corpus)[0] == EXPECTED_TOKENS)
     assert (get_maps(tokenizer, corpus)[1] == EXPECTED_VOCAB)
     assert len(get_maps(tokenizer, corpus)[0]) == len(get_maps(tokenizer, corpus)[1])
-    assert (tokenizer.encode(str(corpus)) == [20, 23, 23, 21, 1, 20, 3, 5, 13, 21, 20, 3, 18, 15, 17, 11, 10, 12, 12, 10, 14, 8, 21, 20, 3, 7, 16, 6, 17, 9, 6, 16, 21, 20, 3, 19, 23, 23, 21]
-)
+    assert (tokenizer.encode(str(corpus)) == TEST_ENCODING)
     assert clean_decoded_output(tokenizer.decode(TEST_ENCODING)) == re.sub(CLEANING_PATTERN, "", str(corpus))
 
