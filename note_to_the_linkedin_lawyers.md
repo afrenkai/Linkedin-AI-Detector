@@ -1,0 +1,5 @@
+Definitely breaks Linkedin TOS, and I apologize in advance. \
+Too much garbage on the platform, and I want to emulate the "characteristics" of the MBA/Techbro/AI-hypepeople who use it for spamming.\
+We've come a long way from B2B SaaS. Personally, not too interested in LLMs for anything outside of text-gen/token decoding, so this was a pretty cool hobby project for me. 
+
+Linkedin used to do really cool [Tree Stuff](https://engineering.linkedin.com/content/dam/me/engineering/li-en/research/WWW-2019.pdf), and now their work is on [JUDE](https://www.linkedin.com/blog/engineering/ai/jude-llm-based-representation-learning-for-linkedin-job-recommendations), which is an evolution of their [Recommender Stuff](https://arxiv.org/pdf/1809.06481), which is really awesome (not sarcastic, I actually do think it's really sick), but we can do such awesome stuff with the tech, how about we get rid of the enshittified slop on the platform if we're so gung-ho about LLMs? (and maybe do a cost benefit analysis on letting people write posts with LLMs. I get that we gotta make money, but come on!)
