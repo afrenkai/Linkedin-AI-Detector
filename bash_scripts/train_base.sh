@@ -82,6 +82,7 @@ setup_environment() {
   log "Installing dependencies..."
   uv pip install -r "$TORCH_REQ"
   uv pip install -r requirements.txt
+  uv pip install -r extra_reqs.txt
   log "Checking Torch Backend Status ..."
   TORCH_BACKEND_CHECK_OUTPUT=$(uv run --no-sync check_health.py 2>&1)
   echo "$TORCH_BACKEND_CHECK_OUTPUT"
