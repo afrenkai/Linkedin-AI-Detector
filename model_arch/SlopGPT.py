@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from typing import Dict, Optional
 from model_arch.model_helpers import STR_TO_FN_MAP
-import json
 
 
 
