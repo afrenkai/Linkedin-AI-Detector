@@ -1,0 +1,8 @@
+{"expert_layer_offset": 1,
+"expert_layer_period": 2,
+"output_router_logits": false,
+"num_logits_to_keep": 1,
+"router_aux_loss_coef": 0.001,
+"attn_layer_offset": 4,
+"attn_layer_period": 8
+}

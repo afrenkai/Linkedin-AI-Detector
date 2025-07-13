@@ -73,7 +73,7 @@ class BPETokenizer:
 
 
     @staticmethod
-    def merge(pair: str, vocab: Dict[str, int], verbose = False) -> Dict[str, int]:
+    def merge(pair: str, vocab: Dict[str, int], verbose:bool = False) -> Dict[str, int]:
         new_voc = {}
         if verbose:
             print(pair)
@@ -196,4 +196,3 @@ if __name__ == "__main__":
     # print(clean_decoded_output(decoded))
     # clean_corp_compare = re.sub(r"\['|\']", "", str(corpus))
     # print(clean_corp_compare)
-
