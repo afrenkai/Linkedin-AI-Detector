@@ -2,7 +2,7 @@ import torch
 import logging
 import pickle
 from pathlib import Path
-from datetime import datetime
+from utils.consts import MB_CONVERSION_FACTOR
 
 
 
@@ -24,24 +24,23 @@ def setup_logging(output_dir):
     logger = logging.getLogger('slop_gpt_training')
     logger.setLevel(logging.INFO)
 
-    logger.handlers.clear()
-    
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    log_file = Path(output_dir) / f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+ 
+    log_file = Path(output_dir) / 'training.log'
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.INFO)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    console_handler.setFormatter(formatter)
     
-    logger.info(f"Logging initialized. Log file: {log_file}")
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
     return logger
 
 def save_tokenizer(tokenizer, path):
@@ -85,13 +84,13 @@ def get_model_size_mb(model):
     for buffer in model.buffers():
         buffer_size += buffer.nelement() * buffer.element_size()
     
-    size_mb = (param_size + buffer_size) / 1024 / 1024
+    size_mb = (param_size + buffer_size) / MB_CONVERSION_FACTOR
     return size_mb
 
 def format_time(seconds):
 
     if seconds < 60:
-        return f"{seconds:.1f}s"
+        return f"{seconds:.0f}s"
     elif seconds < 3600:
         return f"{seconds//60:.0f}m {seconds%60:.0f}s"
     else:

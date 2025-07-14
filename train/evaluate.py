@@ -9,7 +9,8 @@ def evaluate(model, val_loader, tokenizer, device):
     with torch.no_grad():
         for x, y in val_loader:
             x, y = x.to(device), y.to(device)
-            with torch.amp.autocast(dtype=torch.bfloat16):
+            device_type = 'cuda' if device.startswith('cuda') else 'cpu'
+            with torch.amp.autocast(device_type=device_type, enabled=True, dtype=torch.bfloat16):
                 logits, _= model(x)
                 loss = F.cross_entropy(logits.view(-1, logits.size(-1)), y.view(-1), ignore_index=padding_idx)
             total_loss += loss.item()

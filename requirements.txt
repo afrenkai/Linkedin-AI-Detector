@@ -10,3 +10,4 @@ seaborn
 tensorboard
 plotly
 mypy
+optuna

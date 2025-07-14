@@ -2,27 +2,33 @@ import torch
 import torch.nn as nn
 from typing import Dict, Optional, List
 from model_arch.model_helpers import STR_TO_FN_MAP, SwiGLU
-
+from utils.consts import (
+    MLP_EXPANSION_FACTOR, DEFAULT_PAD_TOKEN_ID, DEFAULT_BOS_TOKEN_ID, 
+    DEFAULT_EOS_TOKEN_ID, DEFAULT_OOS_TOKEN_ID, DEFAULT_HIDDEN_SIZE,
+    DEFAULT_NUM_HEADS, DEFAULT_NUM_LAYERS, DEFAULT_VOCAB_SIZE, 
+    DEFAULT_BLOCK_SIZE, DEFAULT_RMS_NORM_EPS
+)
+import math
 
 
 class SlopGPTConfig:
     "learnable params based on jamba's ones, just a company I like. kv heads are gone, since its dense attn. moe stuff gone too. kv cache kept though" 
     def __init__(self, **init_params):
         self.init_attn_dropout = init_params.get("attention_dropout", 0.0) 
-        self.pad_token_idx =  init_params.get("pad_token_id", 0)
-        self.bos_token_idx = init_params.get("bos_token_id", 1)
-        self.eos_token_idx = init_params.get("eos_token_id", 2)
-        self.oos_token_idx = init_params.get("oos_token_id", 3)
-        self.rms_norm_eps = init_params.get("rms_norm_eps",1e-06)
+        self.pad_token_idx =  init_params.get("pad_token_id", DEFAULT_PAD_TOKEN_ID)
+        self.bos_token_idx = init_params.get("bos_token_id", DEFAULT_BOS_TOKEN_ID)
+        self.eos_token_idx = init_params.get("eos_token_id", DEFAULT_EOS_TOKEN_ID)
+        self.oos_token_idx = init_params.get("oos_token_id", DEFAULT_OOS_TOKEN_ID)
+        self.rms_norm_eps = init_params.get("rms_norm_eps", DEFAULT_RMS_NORM_EPS)
         self.hidden_act_fn = STR_TO_FN_MAP.get(init_params.get("hidden_act", "swiglu"))
-        self.hidden_size  = init_params.get("hidden_size", 1024)
-        self.n_heads = init_params.get("num_attention_heads", 8)
-        self.n_h_layers = init_params.get("num_hidden_layers", 8)
+        self.hidden_size  = init_params.get("hidden_size", DEFAULT_HIDDEN_SIZE)
+        self.n_heads = init_params.get("num_attention_heads", DEFAULT_NUM_HEADS)
+        self.n_h_layers = init_params.get("num_hidden_layers", DEFAULT_NUM_LAYERS)
         self.tie_word_embeddings = init_params.get("tie_word_embeddings", True)
         self.torch_dtype = init_params.get("torch_dtype", "bfloat16")
         self.use_kvcache = init_params.get("use_cache", True)
-        self.vocab_size = init_params.get("vocab_size", 65536)
-        self.block_size = init_params.get("block_size", 1024)
+        self.vocab_size = init_params.get("vocab_size", DEFAULT_VOCAB_SIZE)
+        self.block_size = init_params.get("block_size", DEFAULT_BLOCK_SIZE)
 
 
     
@@ -82,15 +88,15 @@ class SlopGPTransformerBlock(nn.Module):
 
         self.dropout = nn.Dropout(config.init_attn_dropout)
         self.rmsnorm_pre_res_conn = nn.modules.normalization.RMSNorm(self.hidden_size, eps = config.rms_norm_eps)        
-        self.residual_conn_1st_layer = nn.Linear(self.hidden_size, 4* self.hidden_size)
+        self.residual_conn_1st_layer = nn.Linear(self.hidden_size, MLP_EXPANSION_FACTOR * self.hidden_size)
         if config.hidden_act_fn is not None:
             if config.hidden_act_fn == SwiGLU:
-                self.residual_conn_act_fn = config.hidden_act_fn(4*self.hidden_size)
+                self.residual_conn_act_fn = config.hidden_act_fn(MLP_EXPANSION_FACTOR * self.hidden_size)
             else:
                 self.residual_conn_act_fn = config.hidden_act_fn()
         else:
-            self.residual_conn_act_fn = SwiGLU(4*self.hidden_size)
-        self.residual_conn_2nd_layer = nn.Linear(4*self.hidden_size, self.hidden_size)
+            self.residual_conn_act_fn = SwiGLU(MLP_EXPANSION_FACTOR * self.hidden_size)
+        self.residual_conn_2nd_layer = nn.Linear(MLP_EXPANSION_FACTOR * self.hidden_size, self.hidden_size)
         self.residual_conn_dropout = nn.Dropout(config.init_attn_dropout)
     
     def forward(self, x: torch.Tensor, mask: torch.Tensor, kv_cache: Optional[Dict[str, torch.Tensor]] = None, use_cache: bool = False, verbose: bool = False):
@@ -115,8 +121,8 @@ class SlopGPTransformerBlock(nn.Module):
         if use_cache:
             new_kv_cache = {'k': k, 'v': v}
 
-        #whoa dude is that the famout vaswani et al 2017
-        pre_mask_attn_scores = (q @ k.transpose(-2, 1)) / (torch.sqrt(self.head_dim))
+        #whoa dude is that the famous vaswani et al 2017
+        pre_mask_attn_scores = (q @ k.transpose(-2, -1)) / (math.sqrt(self.head_dim)) 
         masked_attn = pre_mask_attn_scores.masked_fill(mask==0, float('-inf'))
         attn_probs = torch.softmax(masked_attn, dim = -1)
         attn_out = (attn_probs @ v).transpose(1, 2).contiguous().view(batch, seq_len, hidden_dim)

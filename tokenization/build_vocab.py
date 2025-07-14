@@ -3,7 +3,7 @@ from tqdm import tqdm
 import regex as re
 import json
 import pickle
-from utils.consts import GPT4_REGEX, DEFAULT_SPECIAL_TOKENS
+from utils.consts import GPT4_REGEX, DEFAULT_SPECIAL_TOKENS, DEFAULT_BPE_MERGES, TOKEN_CLEANUP_REGEX, JSON_INDENT
 
 def read_in_slop(file: str) -> List[str]:
     with open(file, "r", encoding="utf-8") as f:
@@ -119,7 +119,7 @@ class BPETokenizer:
         return vocab
 
 
-    def train(self, corpus: List[str], n_merges: int = 100, verbose:bool = False) -> None:
+    def train(self, corpus: List[str], n_merges: int = DEFAULT_BPE_MERGES, verbose:bool = False) -> None:
         vocab = self.build_init_vocab(corpus)
         self.corpus = corpus
         self.merges = []
@@ -193,7 +193,7 @@ class BPETokenizer:
         
         if format.lower() == "json":
             with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2) # i think this is how you pretty print i dont remember to be honest
+                json.dump(data, f, ensure_ascii=False, indent=JSON_INDENT) # i think this is how you pretty print i dont remember to be honest
         elif format.lower() == "pickle":
             with open(filepath, "wb") as f:
                 pickle.dump(data, f)
@@ -229,7 +229,7 @@ class BPETokenizer:
 
 
 def clean_decoded_output(output: str):
-    pat = re.compile(r'(<[\w]{3}>)')
+    pat = re.compile(TOKEN_CLEANUP_REGEX)
     new_str =  re.sub(pat, "", output)
     return new_str
 

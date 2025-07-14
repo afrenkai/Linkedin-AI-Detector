@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import json
 import pickle
+import os
 from dataset.dataset import create_dl
 from model_arch.SlopGPT import SlopGPT, SlopGPTConfig
 from argparse import ArgumentParser
@@ -11,6 +12,13 @@ from pathlib import Path
 from train.train_utils import save_checkpoint, setup_logging, save_tokenizer
 from train.evaluate import evaluate
 from tokenization.build_vocab import BPETokenizer
+from utils.consts import (
+    DEFAULT_GRAD_CLIP_NORM, DEFAULT_LOG_FREQUENCY, DEFAULT_EPOCHS, 
+    DEFAULT_BATCH_SIZE, DEFAULT_LEARNING_RATE, DEFAULT_WARMUP_STEPS,
+    DEFAULT_BLOCK_SIZE, DEFAULT_GRAD_ACCUM, DEFAULT_WEIGHT_DECAY,
+    DEFAULT_BETA_1, DEFAULT_BETA_2, DEFAULT_EVAL_EVERY, DEFAULT_SAVE_EVERY,
+    JSON_INDENT
+)
 
 def train(model: torch.nn.Module,
            loader: torch.utils.data.DataLoader,
@@ -45,7 +53,8 @@ def train(model: torch.nn.Module,
         for step, (x, y) in enumerate(loader):
             x, y = x.to(device), y.to(device)
             
-            with torch.amp.autocast(device_type='cuda', enabled = True, dtype=torch.bfloat16):
+            device_type = 'cuda' if device.startswith('cuda') else 'cpu'
+            with torch.amp.autocast(device_type=device_type, enabled=True, dtype=torch.bfloat16):
                 logits, _ = model(x)
                 pred = logits.view(-1, logits.size(-1))
                 target = y.view(-1)
@@ -57,14 +66,14 @@ def train(model: torch.nn.Module,
             
             if (step + 1) % grad_accum == 0:
                 scaler.unscale_(opt)
-                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), DEFAULT_GRAD_CLIP_NORM)
                 scaler.step(opt)
                 scaler.update()
                 sched.step()
                 opt.zero_grad(set_to_none=True)
                 global_step += 1
 
-                if global_step % 100 == 0:
+                if global_step % DEFAULT_LOG_FREQUENCY == 0:
                     current_lr = sched.get_last_lr()[0]
                     log_msg = f'Epoch {epoch + 1} | Step {global_step} | Loss {loss.item() * grad_accum:.4f} | LR {current_lr:.2e} | Grad Norm {grad_norm:.4f}'
                     logger.info(log_msg)
@@ -95,20 +104,27 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, required=True, default="model_arch/model_config.json", help="model_config.json (dense‑only for now)")
     parser.add_argument("--tokenizer", type=str, required=True, help="Path to saved tokenizer.pkl")
     parser.add_argument("--output_dir", type=str, default="ckpts_dense")
-    parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--batch_size", type=int, default=4)
-    parser.add_argument("--lr", type=float, default=2e-4)
-    parser.add_argument("--warmup_steps", type=int, default=1000)
-    parser.add_argument("--block_size", type=int, default=2048)
-    parser.add_argument("--grad_accum", type=int, default=8)
-    parser.add_argument("--optim_weight_decay", type=float, default=0.1)
-    parser.add_argument("--optim_beta_1", type=float, default=0.9)
-    parser.add_argument("--optim_beta_2", type=float, default=0.95)
+    parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS)
+    parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE)
+    parser.add_argument("--lr", type=float, default=DEFAULT_LEARNING_RATE)
+    parser.add_argument("--warmup_steps", type=int, default=DEFAULT_WARMUP_STEPS)
+    parser.add_argument("--block_size", type=int, default=DEFAULT_BLOCK_SIZE)
+    parser.add_argument("--grad_accum", type=int, default=DEFAULT_GRAD_ACCUM)
+    parser.add_argument("--optim_weight_decay", type=float, default=DEFAULT_WEIGHT_DECAY)
+    parser.add_argument("--optim_beta_1", type=float, default=DEFAULT_BETA_1)
+    parser.add_argument("--optim_beta_2", type=float, default=DEFAULT_BETA_2)
     parser.add_argument("--resume_path", type=str, default=None, help="Path to checkpoint to resume from")
-    parser.add_argument("--eval_every", type=int, default=500, help="Evaluate every N steps")
-    parser.add_argument("--save_every", type=int, default=1000, help="Save checkpoint every N steps")
+    parser.add_argument("--eval_every", type=int, default=DEFAULT_EVAL_EVERY, help="Evaluate every N steps")
+    parser.add_argument("--save_every", type=int, default=DEFAULT_SAVE_EVERY, help="Save checkpoint every N steps")
 
     args = parser.parse_args()
+
+    if not os.path.exists(args.corpus):
+        raise FileNotFoundError(f"Corpus file not found: {args.corpus}")
+    if not os.path.exists(args.config):
+        raise FileNotFoundError(f"Config file not found: {args.config}")
+    if not os.path.exists(args.tokenizer):
+        raise FileNotFoundError(f"Tokenizer file not found: {args.tokenizer}")
 
     logger = setup_logging(args.output_dir)
 
@@ -151,6 +167,8 @@ if __name__ == "__main__":
     start_epoch = 0
     global_step = 0
     if args.resume_path:
+        if not os.path.exists(args.resume_path):
+            raise FileNotFoundError(f"Resume checkpoint not found: {args.resume_path}")
         logger.info(f"Resuming from checkpoint: {args.resume_path}")
         ckpt = torch.load(args.resume_path, map_location=device)
         model.load_state_dict(ckpt["model"])
@@ -166,10 +184,10 @@ if __name__ == "__main__":
     save_tokenizer(tokenizer, output_path / "tokenizer.pkl")
     
     with open(output_path / "config.json", 'w') as f:
-        json.dump(config_data, f, indent=2)
+        json.dump(config_data, f, indent=JSON_INDENT)
     
     with open(output_path / "training_args.json", 'w') as f:
-        json.dump(vars(args), f, indent=2)
+        json.dump(vars(args), f, indent=JSON_INDENT)
     
     logger.info("Saved tokenizer, config, and training args")
 
