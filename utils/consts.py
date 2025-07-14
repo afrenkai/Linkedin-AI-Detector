@@ -35,6 +35,8 @@ MIN_CHUNK_SIZE = 2
 DEFAULT_PAD_TOKEN_ID = 0
 DEFAULT_BPE_MERGES = 100
 TOKEN_CLEANUP_REGEX = r'(<[\w]{3}>)'
+TID_MAP_TUPLE_LOC = 0
+IDT_MAP_TUPLE_LOC = 1
 
 JSON_INDENT = 2
 MB_CONVERSION_FACTOR = 1024 * 1024  # on the lowks its been like 3 years since intro to cs but i think its 1024 * 1024...

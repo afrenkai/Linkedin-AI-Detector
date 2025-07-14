@@ -7,7 +7,7 @@ import os
 from dataset.dataset import create_dl
 from model_arch.SlopGPT import SlopGPT, SlopGPTConfig
 from argparse import ArgumentParser
-from torchtune.training import get_cosine_schedule_with_warmup
+from transformers.optimization import get_cosine_schedule_with_warmup
 from pathlib import Path
 from train.train_utils import save_checkpoint, setup_logging, save_tokenizer
 from train.evaluate import evaluate
@@ -155,11 +155,13 @@ if __name__ == "__main__":
     )
     
     total_steps = len(train_dl) * args.epochs // args.grad_accum
+    # https://github.com/huggingface/transformers/blob/v4.23.1/src/transformers/optimization.py#L104
     sched = get_cosine_schedule_with_warmup(
-        opt, 
+        optimizer = opt,
         num_warmup_steps=args.warmup_steps, 
         num_training_steps=total_steps
     )
+
     
     scaler = torch.amp.GradScaler(enabled=(device == 'cuda'))
 

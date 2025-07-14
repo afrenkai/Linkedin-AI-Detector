@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from dataset.dataset import SlopDataset
 from model_arch.SlopGPT import SlopGPT, SlopGPTConfig
-from torchtune.training import get_cosine_schedule_with_warmup
+from transformers.optimization import get_cosine_schedule_with_warmup
 from train.evaluate import evaluate
 from typing import Union
 import logging
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class SlopDatasetTuning(SlopDataset):
 
     def __init__(self, corpus, block_size, tokenizer, split: str):
-        super(SlopDataset).__init__()
+        super(SlopDataset).__init__(file_path = corpus, block_size = block_size, tokenizer  = tokenizer, split = split)
         self.block_size = block_size
         self.data = []
         

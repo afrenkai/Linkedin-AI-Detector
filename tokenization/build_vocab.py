@@ -43,7 +43,7 @@ class BPETokenizer:
     @staticmethod
     def pre_tokenize(tok: str) -> List[str]:
         chars = re.findall(r"\X", tok)
-        return ["<BOW>"] + chars + ["<EOW>"]
+        return chars
 
     def build_init_vocab(self, corp: List[str]) -> Dict[str, int]:
         vocab: Dict[str, int] = {}
@@ -233,7 +233,22 @@ def clean_decoded_output(output: str):
     new_str =  re.sub(pat, "", output)
     return new_str
 
-
+if __name__ == "__main__":
+    corp = ["I am upskilling fresher 👳️"]
+    tokenizer = BPETokenizer(spec_tok_list = DEFAULT_SPECIAL_TOKENS)
+    print(tokenizer.pre_tokenize(corp[0]))
+    tokenizer.train(corp)
+    tid = tokenizer.tok_to_id_map
+    idt = tokenizer.id_to_tok_map
+    print(tid, '\n')
+    print(idt, '\n')
+    encoded = tokenizer.encode(corp[0])
+    decoded = tokenizer.decode(encoded)
+    print(encoded)
+    print(decoded)
+    #
+    
+    
 
 
     
