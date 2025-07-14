@@ -1,6 +1,8 @@
 from typing import List, Dict, Tuple, Optional
 from tqdm import tqdm
 import regex as re
+import json
+import pickle
 from utils.consts import GPT4_REGEX, DEFAULT_SPECIAL_TOKENS
 
 def read_in_slop(file: str) -> List[str]:
@@ -20,7 +22,7 @@ class BPETokenizer:
         """
         self.pattern = GPT4_REGEX if not pattern else pattern
         self.spec_tok_list = spec_tok_list if spec_tok_list else DEFAULT_SPECIAL_TOKENS
-        self.merges: List[Tuple[str, str]]
+        self.merges: List[Tuple[str, ...]] = []
         self.tok_to_id_map: Dict[str, int] = {}
         self.id_to_tok_map:Dict[int, str] = {}
         self.corpus:List[str] = []
@@ -44,7 +46,7 @@ class BPETokenizer:
         return ["<BOW>"] + chars + ["<EOW>"]
 
     def build_init_vocab(self, corp: List[str]) -> Dict[str, int]:
-        vocab = {}
+        vocab: Dict[str, int] = {}
         self.corpus = corp
         for line in corp:
             chunk = self.regex_split(line)
@@ -59,7 +61,7 @@ class BPETokenizer:
 
     @staticmethod
     def get_init_vocab_metrics(vocab: Dict[str, int]) -> Dict[str, int]:
-        pairs = {}
+        pairs: Dict[str, int] = {}
         for word_str in vocab:
             tok = word_str.split()
             for i in range(len(tok) - 1):
@@ -129,7 +131,7 @@ class BPETokenizer:
                 if verbose:
                     print("empty vocab")
                 break
-            best_pair = max(info, key = info.get)
+            best_pair = max(info, key=lambda x: info[x])
             self.merges.append(tuple(best_pair.split()))
             vocab = self.merge(best_pair, vocab)
             if verbose:
@@ -170,6 +172,58 @@ class BPETokenizer:
         skip = {"<BOW>", "<EOW>", "<CLS>", "<PAD>"}
         tokens = [self.id_to_tok_map.get(i, "") for i in ids]
         return "".join(t for t in tokens if t and t not in skip)
+
+    def save(self, filepath: str, format: str = "json") -> None:
+        """
+        Save the tokenizer to json
+        
+        @param filepath: Path to save the tokenizer
+        @param format: Format to save in ("json" or "pickle")
+        """
+        if not self.tok_to_id_map:
+            raise RuntimeError("Tokenizer not yet trained.")
+        
+        data = {
+            "pattern": self.pattern,
+            "spec_tok_list": self.spec_tok_list,
+            "merges": self.merges,
+            "tok_to_id_map": self.tok_to_id_map,
+            "id_to_tok_map": self.id_to_tok_map
+        }
+        
+        if format.lower() == "json":
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2) # i think this is how you pretty print i dont remember to be honest
+        elif format.lower() == "pickle":
+            with open(filepath, "wb") as f:
+                pickle.dump(data, f)
+        else:
+            raise ValueError("Format must be 'json' or 'pickle'")
+
+    @classmethod
+    def load(cls, filepath: str, format: str = "json") -> "BPETokenizer":
+        """
+        Loads a tokenizer from a file.
+        
+        @param filepath: Path to load the tokenizer from
+        @param format: Format to load from ("json" or "pickle")
+        @return: Loaded BPETokenizer instance
+        """
+        if format.lower() == "json":
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        elif format.lower() == "pickle":
+            with open(filepath, "rb") as f:
+                data = pickle.load(f)
+        else:
+            raise ValueError("Format must be 'json' or 'pickle'")
+        
+        tokenizer = cls(pattern=data["pattern"], spec_tok_list=data["spec_tok_list"])
+        tokenizer.merges = data["merges"]
+        tokenizer.tok_to_id_map = data["tok_to_id_map"]
+        tokenizer.id_to_tok_map = data["id_to_tok_map"]
+        
+        return tokenizer
 
 
 

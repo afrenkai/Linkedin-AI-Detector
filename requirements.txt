@@ -9,3 +9,4 @@ pandas
 seaborn
 tensorboard
 plotly
+mypy

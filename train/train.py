@@ -7,11 +7,11 @@ import pickle
 from dataset.dataset import create_dl
 from model_arch.SlopGPT import SlopGPT, SlopGPTConfig
 from argparse import ArgumentParser
-from torchtune.modules import get_cosine_schedule_with_warmup
+from torchtune.training import get_cosine_schedule_with_warmup
 from pathlib import Path
 from train.train_utils import save_checkpoint, setup_logging, save_tokenizer
 from train.evaluate import evaluate
-from tokenization import BPETokenizer
+from tokenization.build_vocab import BPETokenizer
 
 def train(model: torch.nn.Module,
            loader: torch.utils.data.DataLoader,
@@ -19,14 +19,15 @@ def train(model: torch.nn.Module,
            opt: optim.AdamW,
            epochs: int,
            device,
-           tokenizer: Union[BPETokenizer, str],
+           tokenizer: BPETokenizer,
            grad_accum,
            scaler,
            output_dir,
-           sched: get_cosine_schedule_with_warmup,
+           sched,
            logger,
            start_epoch: int = 0,
            global_step: int = 0):
+
     padding_idx = tokenizer.tok_to_id_map["<PAD>"]
     model.train()
     best_val_loss = float('inf')
@@ -45,7 +46,7 @@ def train(model: torch.nn.Module,
         for step, (x, y) in enumerate(loader):
             x, y = x.to(device), y.to(device)
             
-            with torch.amp.autocast(device_type='cuda' if torch.cuda.is_available() else 'cpu', dtype=torch.bfloat16):
+            with torch.amp.autocast(device_type='cuda', enabled = True, dtype=torch.bfloat16):
                 logits, _ = model(x)
                 pred = logits.view(-1, logits.size(-1))
                 target = y.view(-1)
@@ -128,8 +129,8 @@ if __name__ == "__main__":
             tokenizer = pickle.load(f)
         logger.info(f"Loaded tokenizer with vocab size: {len(tokenizer.tok_to_id_map)}")
     
-    train_dl = create_dl(args.corpus, args.block_size, args.batch_size, split='train')
-    val_dl = create_dl(args.corpus, args.block_size, args.batch_size, split='val')
+    train_dl = create_dl(args.corpus, args.block_size, args.batch_size, tokenizer, split='train')
+    val_dl = create_dl(args.corpus, args.block_size, args.batch_size, tokenizer, split='val')
 
     opt = optim.AdamW(
         model.parameters(), 
@@ -187,7 +188,6 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         sched=sched,
         logger=logger,
-        use_wandb=args.use_wandb,
         start_epoch=start_epoch,
         global_step=global_step
     )

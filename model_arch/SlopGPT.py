@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from typing import Dict, Optional
-from model_arch.model_helpers import STR_TO_FN_MAP
+from typing import Dict, Optional, List
+from model_arch.model_helpers import STR_TO_FN_MAP, SwiGLU
 
 
 
@@ -35,25 +35,29 @@ class SlopGPT(nn.Module):
         self.embed = nn.Embedding(config.vocab_size, config.hidden_size)
         self.pos_enc = nn.Parameter(torch.zeros(1, config.block_size, config.hidden_size)) # learnable instead of [sin (k/n^(2i/d))], [cos(k/n^(2i/d))]
 
-        self.layers = nn.ModuleList([SlopGPTransformerBlock(config) for x in range (config.n_h_layers)])
-        self.final_norm = nn.modules.normalization.RMSNorm(config.hidden_size, config.vocab_size)
+        self.layers = nn.ModuleList([SlopGPTransformerBlock(self.config) for x in range (config.n_h_layers)])
+        self.final_norm = nn.modules.normalization.RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         if config.tie_word_embeddings:
-            self.lm_head_weight = self.embed.weight
-    def forward(self, input_idxs, use_cache: bool = False, kv_cache: Dict[str, torch.tensor] = False):
+            self.lm_head.weight = self.embed.weight
+    
+    def forward(self, input_idxs, use_cache: bool = False, kv_cache: Optional[List[Dict[str, torch.Tensor]]] = None):
         batch, seq_len = input_idxs.size()
         device = input_idxs.device # TODO: lowkey a little freaky if I do multigpu
-
+        new_kv_caches = []
         # pos = torch.arange(0, seq_len, device = device).unsqueeze(0)
         x = self.embed(input_idxs) + self.pos_enc[:, :seq_len, :] # since we are only targeting position in the tensor
         mask = torch.tril(torch.ones(seq_len, seq_len, device = device)).unsqueeze(0).unsqueeze(0) # tensor of [[[1]], [1]], [seq_len]], [seq_len]]] to match shape of other tensor
 
         if use_cache and kv_cache:
-            new_kv_caches = []
             for i, layer in enumerate(self.layers):
                 cache_i = kv_cache[i] if i < len(kv_cache) else None
                 x, layer_kv = layer(x, mask, kv_cache=cache_i, use_cache=use_cache)
                 new_kv_caches.append(layer_kv)
+        else:
+            for layer in self.layers:
+                x, _ = layer(x, mask, kv_cache=None, use_cache=False)
+        
         x = self.final_norm(x)
         logits = self.lm_head(x)
 
@@ -61,7 +65,7 @@ class SlopGPT(nn.Module):
             
     
 class SlopGPTransformerBlock(nn.Module):
-    def __init__(self, config: Dict):
+    def __init__(self, config: SlopGPTConfig):
         super().__init__()
         self.n_heads = config.n_heads
         self.hidden_size = config.hidden_size
@@ -77,15 +81,19 @@ class SlopGPTransformerBlock(nn.Module):
         self.lin_proj_o = nn.Linear(self.hidden_size, self.hidden_size)
 
         self.dropout = nn.Dropout(config.init_attn_dropout)
-        self.rmsnorm_pre_res_conn = nn.modules.normalization.RMSNorm(self.hidden_size, eps = config.rms_norm_eps)
-
-        
+        self.rmsnorm_pre_res_conn = nn.modules.normalization.RMSNorm(self.hidden_size, eps = config.rms_norm_eps)        
         self.residual_conn_1st_layer = nn.Linear(self.hidden_size, 4* self.hidden_size)
-        self.resudial_conn_act_fn = config.hidden_act_fn
+        if config.hidden_act_fn is not None:
+            if config.hidden_act_fn == SwiGLU:
+                self.residual_conn_act_fn = config.hidden_act_fn(4*self.hidden_size)
+            else:
+                self.residual_conn_act_fn = config.hidden_act_fn()
+        else:
+            self.residual_conn_act_fn = SwiGLU(4*self.hidden_size)
         self.residual_conn_2nd_layer = nn.Linear(4*self.hidden_size, self.hidden_size)
         self.residual_conn_dropout = nn.Dropout(config.init_attn_dropout)
     
-    def forward(self, x: torch.tensor, mask: torch.tensor, kv_cache: Optional[Dict[str, torch.tensor]] = None, use_cache: bool = False, verbose: bool = False):
+    def forward(self, x: torch.Tensor, mask: torch.Tensor, kv_cache: Optional[Dict[str, torch.Tensor]] = None, use_cache: bool = False, verbose: bool = False):
 
         new_kv_cache = None
         batch, seq_len, hidden_dim = x.size()
@@ -111,17 +119,16 @@ class SlopGPTransformerBlock(nn.Module):
         pre_mask_attn_scores = (q @ k.transpose(-2, 1)) / (torch.sqrt(self.head_dim))
         masked_attn = pre_mask_attn_scores.masked_fill(mask==0, float('-inf'))
         attn_probs = torch.softmax(masked_attn, dim = -1)
-        attn_out = (attn_probs @ v).trasnspose(1, 2).contiguous().view(batch, seq_len, hidden_dim)
+        attn_out = (attn_probs @ v).transpose(1, 2).contiguous().view(batch, seq_len, hidden_dim)
         
-        attn_x  = x + self.dropout(self.lin_proj_o(attn_out))
+        attn_x = x + self.dropout(self.lin_proj_o(attn_out))
 
         res_norm_x = self.rmsnorm_pre_res_conn(attn_x)
-        res_norm_x = self.residual_conn_1st_layer(x)
-        res_norm_x = self.resudial_conn_act_fn(x.shape)
-        res_norm_x = self.residual_conn_2nd_layer(x)
-        res_norm_x = self.residual_conn_dropout(x)
-        res_x = attn_out + res_norm_x
-        out_x = attn_x + res_x
+        res_norm_x = self.residual_conn_1st_layer(res_norm_x)
+        res_norm_x = self.residual_conn_act_fn(res_norm_x)
+        res_norm_x = self.residual_conn_2nd_layer(res_norm_x)
+        res_norm_x = self.residual_conn_dropout(res_norm_x)
+        out_x = attn_x + res_norm_x
 
         return out_x, new_kv_cache
 
