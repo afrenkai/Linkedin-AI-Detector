@@ -2,7 +2,6 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import json
-from typing import Union
 import pickle
 from dataset.dataset import create_dl
 from model_arch.SlopGPT import SlopGPT, SlopGPTConfig
