@@ -1,14 +1,9 @@
 import json
 from model_arch.SlopGPT import SlopGPT, SlopGPTConfig
 import torch
-from tests.tok_toy_scenarios import EXPECTED_X, EXPECTED_Y
-from utils.consts import DEFAULT_BATCH_SIZE, DEFAULT_BLOCK_SIZE, DEFAULT_BPE_MERGES
+from utils.consts import DEFAULT_BATCH_SIZE, DEFAULT_BLOCK_SIZE
 from utils.determinism import set_seeds
-from tokenization.build_vocab import BPETokenizer, read_in_slop
-from dataset.dataset import create_dl
-import os
 
-import pytest
 
 set_seeds(512)
 

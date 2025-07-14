@@ -52,7 +52,7 @@ def test_dataloader_shapes(corpus_file, tokenizer, block_size, batch_size):
     assert x.shape == (batch_size, block_size)
 
 def test_expected_first_example(sample_texts, corpus_file, tokenizer):
-    block_size, batch_size = 32, 2
+    block_size, _ = 32, 2
     expected_x, expected_y = _expected_xy(sample_texts[0], tokenizer, block_size)
     assert expected_x[:10] == EXPECTED_X
     assert expected_y[:10] == EXPECTED_Y

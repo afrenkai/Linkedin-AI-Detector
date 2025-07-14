@@ -14,10 +14,7 @@ from typing import Union
 import logging
 from tokenization.build_vocab import BPETokenizer
 import argparse
-from utils.consts import (
-    DEFAULT_GRAD_CLIP_NORM,
-    JSON_INDENT, OBJECTIVE_EPOCHS, TUNING_TRAIN_RATIO, TUNING_EVAL_RATIO, MIN_CHUNK_SIZE, DEFAULT_PAD_TOKEN_ID
-)
+from utils.consts import (JSON_INDENT, OBJECTIVE_EPOCHS, TUNING_TRAIN_RATIO, TUNING_EVAL_RATIO, MIN_CHUNK_SIZE, DEFAULT_PAD_TOKEN_ID)
 
 
 logging.basicConfig(level=logging.INFO)
@@ -178,7 +175,8 @@ def objective(trial: optuna.Trial) -> float:
                 
                 if (step + 1) % params['grad_accum'] == 0:
                     scaler.unscale_(opt)
-                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), DEFAULT_GRAD_CLIP_NORM)
+                    #TODO: come back to this !!!!!!!!
+                    # grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), DEFAULT_GRAD_CLIP_NORM)
                     scaler.step(opt)
                     scaler.update()
                     sched.step()
