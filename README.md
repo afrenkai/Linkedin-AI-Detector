@@ -10,7 +10,7 @@ Proof of Concept. No actual data has been used from Linkedin.
 
 Learning Resources Used:
 
-##############################  ADDING MORE AS I KEEP WORKING ON THIS  ##############################
+ ADDING MORE AS I KEEP WORKING ON THIS  
 
 Tokenizer:
 - [Andrej Karpathy's MinBpe](https://github.com/karpathy/minbpe)
