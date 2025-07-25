@@ -3,7 +3,6 @@ tqdm
 pytest
 numpy
 ruff
-wandb
 matplotlib
 pandas
 seaborn
