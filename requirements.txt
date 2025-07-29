@@ -10,3 +10,4 @@ tensorboard
 plotly
 mypy
 optuna
+requests
