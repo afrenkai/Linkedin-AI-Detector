@@ -5,6 +5,7 @@ WIP
 
 Disclaimer:
 Proof of Concept. No actual data has been used from Linkedin. 
+For obvious reasons, I will not be guiding anyone on how to automate processes of data collection from LinkedIn. The two seed examples were gathered with permission, manually, from my feed in accordance with LinkedIn's Terms of Service.  
 
 
 
@@ -29,7 +30,7 @@ Architecture, Training, Optimization, Etc...:
 - [Cosine Annealed Learning Rate with Warm Up](https://www.tutorialexample.com/understand-transformers-get_cosine_schedule_with_warmup-with-examples-pytorch-tutorial/)
 - [Seeds and Determinism in Distributed Training](https://stackoverflow.com/questions/62097236/how-to-set-random-seed-when-it-is-in-distributed-training-in-pytorch)
 
-Stuff I think is super cool and wish I had time to disseminate, implement and understand more than surface level
+Stuff I think is super cool and I might add later when I have time to disseminate, implement and understand more than surface level
 - [THE SSM Paper](https://arxiv.org/pdf/2111.00396)
 - [Flash Attention](https://arxiv.org/abs/2205.14135)
 - [MoE Layers](https://arxiv.org/pdf/1701.06538)
